@@ -88,7 +88,10 @@ CKEDITOR.plugins.add('permalink', {
                   return;
                 }
                 el.aposDocId = doc._id;
-                el.getDialog().getContentElement('info', 'linkDisplayText').setValue(doc.title);
+                var displayText = el.getDialog().getContentElement('info', 'linkDisplayText');
+                if (!displayText.getValue()) {
+                  displayText.setValue(doc.title);
+                }
                 el.getDialog().getContentElement('info', 'docChosen').setValue(doc.title);
               });
             },
