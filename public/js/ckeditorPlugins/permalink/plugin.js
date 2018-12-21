@@ -5,17 +5,22 @@ CKEDITOR.plugins.add('permalink', {
     linkPlugin.parseLinkAttributes = function(editor, element) {
       var href = (element && (element.data('cke-saved-href') || element.getAttribute('href'))) || '';
       var result = superParseLinkAttributes.call(this, editor, element);
-      var matches = href.match(/^\#apostrophe-permalink-(.*)\?updateTitle=(\d)$/);
-      if (!matches) {
+
+      var permalinkMatch = href.match(/^#apostrophe-permalink-([^?]+)/);
+      if (!permalinkMatch) {
         // defaults to true so if we do switch to a doc link it will be selected
         result.docUpdateTitle = true;
         return result;
       }
 
+      var updateTitleMatch = href.match(/\?updateTitle=(\d)$/) || [];
+      var downloadMatch = href.match(/&download=(\d)$/) || [];
+
       return _.assign(result, {
         type: 'doc',
-        docId: matches[1],
-        docUpdateTitle: !!parseInt(matches[2])
+        docId: permalinkMatch[1],
+        docUpdateTitle: !!parseInt(updateTitleMatch[1]),
+        docDownload: !!parseInt(downloadMatch[1])
       });
     };
 
@@ -23,18 +28,23 @@ CKEDITOR.plugins.add('permalink', {
     linkPlugin.getLinkAttributes = function(editor, data) {
       var result = superGetLinkAttributes.call(this, editor, data);
 
-        if ((data.type === 'doc') && data.docId) {
-          var id = data.docId;
-          var url = '#apostrophe-permalink-' + id + '?updateTitle=' + (data.docUpdateTitle ? '1' : '0');
-          _.assign(result.set, {
-            'data-cke-saved-href': url,
-            'href': url
-          });
-        } else {
-          result.removed.push('docId');
+      if ((data.type === 'doc') && data.docId) {
+        var id = data.docId;
+        var url = '#apostrophe-permalink-' + id + '?updateTitle=' + (data.docUpdateTitle ? '1' : '0');
+
+        if (data.docDownload) {
+          url += '&download=1';
         }
 
-        return result;
+        _.assign(result.set, {
+          'data-cke-saved-href': url,
+          'href': url
+        });
+      } else {
+        result.removed.push('docId');
+      }
+
+      return result;
     };
 
     CKEDITOR.on('dialogDefinition', function(e) {
@@ -121,6 +131,20 @@ CKEDITOR.plugins.add('permalink', {
               data.docUpdateTitle = !!this.getValue();
             }
           },
+          {
+            type: 'checkbox',
+            id: 'docDownload',
+            label: 'Download Document',
+            required: false,
+            setup: function(data) {
+              if (data.docDownload) {
+                this.setValue('checked', 'checked');
+              }
+            },
+            commit: function(data) {
+              data.docDownload = !!this.getValue();
+            }
+          }
         ]
       });
 
